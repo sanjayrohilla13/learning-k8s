@@ -1,0 +1,226 @@
+K8s Cluster
+    - A Cluster is group of nodes; every cluster has atleast one master and worker node.
+
+Features of Kubernetes
+ 1. Orchestration of containers running on different n/w
+ 2. Autoscaling
+ 3. Auto Healing
+ 4. Load Balancing
+ 5. Platform Independent
+ 6. Fault Tolerance (POD Failure)
+ 7. Rollback to previous Version
+ 8. Health Monitoring of containers
+ 9. Batch Execution
+
+ Kubernetes is master slave architecture
+
+ Types of architecture
+    1. single master single node
+    2. Single master Multiple nodes
+    2. Multiple master multiple nodes
+
+    - Nodes have pods. It is smallest unit which consists of containers.
+    - Volumes in pods can be shared among each other
+    - One pod can have multiple containers but normally have one container.
+     
+Kubernetes Cluster Architecture:
+    - Master Architecture (Control Plane)
+        - etcd Cluster  
+            - is not part of Kubernetes but important for running the cluster
+            - it consists of the database of the Kubernetes Cluster basically maintains states etc.
+        - API Server
+            - API server will communicate with all the components
+        - Control Manager - Maintains actual state = desired state
+        - Kube Scheduler
+      * all services communicate with API server only even users.
+    
+    - worker/minion 
+        - Kube-Proxy > assigned ip address to the pod
+        - Kubelet    > controls the pod and informs the API server about the status of the pod
+        - Pod        > consists of Container Engine
+        * You need to install docker/container engine on the nodes
+        * Usaully, each pod have one container. Even though we can create multiple containers.
+        * No two pods can communicate with the each other. 
+
+Working with Kubernetes
+    - Instructions for the K8S cluster are given in the form of YAML file called Manifests
+    - Manifests are applied to Cluster (Master) to bring the cluster in desired state
+    - Pod runs on Node which is controlled by Master
+    
+Role of Master Node
+    - Kubernetes cluster contains continers running on Bare Metal/VM Instances/Cloud Instances/all mix.
+    - Kubernetes designates one or more of these as master and all other as workers.
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Components of Control Plan (Master)
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    1. Kube-api-server
+        - Kube-api-server (for all communications) - We apply .yaml or json manifest to kube-apiserver
+        - This kube-apiserver is menat to scale automatically as per load.
+        - Kube apiserver is front end of control Plane
+    2. etcd
+        - Stores metadata and status of cluster
+        - etcd is consistent and high available store (key value store)
+        - source of touch for cluster state (info about state of the cluster)
+        - etcd has following features:
+            1. Fully replicated - The entire state is available on every node in the cluster.
+            2. Secure - Implements automatic TLs with optional Client Certificate Authentication
+            3. Fast - Benchmarked at 10,000 writes per second
+    3. Kube-Scheduler
+        - When user makes request for the creation & management of pods, kube-Scheduler is going to take
+          action on these requests.
+        - Handles pod creation and management
+        - A Scheduler matches for newly created pods that have no node assigned.
+        - For every pod that the Scheduler discovers, the Scheduler becomes responsible for finding the best node
+          for that pod to run on.
+        - Scheduler gets the information for hardware configuration from configuration files and schedules the pods on nodes 
+          accordingly.
+    4. controller Manager
+        - Make sure actual state of cluster matches the desired state.
+        - There are two possible choices for controller Manager
+            1. Cloud Controller Manager (When Cluster is on Cloud)
+            2. Kube Controller Manager (when the cluster is not on cloud)
+        - Components of master that runs controller
+            1. Node Controller
+                - For checking the cloud provider to determine if a node has been detected in the cloud after it
+                  stops responding.
+            2. Route Controller
+                - Responsible for setting up network routes on your cloud
+            3. Service Controller
+                - Responsible for load balancers on your cloud against services of type load balancers
+            4. Volume controller
+                - For creating, attaching and mounting volumes and interacting with the cloud provider to 
+                  orchestrate volumes.
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Components of Nodes (Kubelet and Container Engine)
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Nodes are going to run 3 important piece of software/process.
+
+    1. Kubelet
+        - Agent running on the node
+        - Listen to the Kubernetes master (e.g. pod creation requests)
+        - use port 10255
+        - Send successful report to the master
+    2. Container Engine
+        - Works with Kubelet
+        - Pulls required images
+        - Start/Stops containers
+        - Expose containers on ports specified in the manifest
+    3. Kube-Proxy
+        - Assign dynamic IP address to each pod         
+        - Kube-Proxy runs on each node and this make sure that each pod will get its own unique IP address
+    4. Pod
+        - Smallest unit in the Kubernetes
+        - Pod is group of one or more containers that are deployed together n the same host and tightly coupled
+        - Pod is controlled unit not containers
+        - Pod runs on node that is controlled by master
+        - K8s knows only about pods not about containers
+        - Can't start container without a pod
+        - Ideally one pod should contain one container 
+    
+    Multi-container pods
+        - Share access to memory spaces
+        - can connect to each other using localhost with container port no
+        - Share access to the same volumes
+        - Containers in pod are deployed in all or nothing manner
+        - Entire pod is hosted on the same node (Scheduler will decide about which node)
+    Pod Limitions
+        - No Autohealing or Scaling
+        - Pod crash wont retart the pod again
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++        
+Higher Level Kubernetes Objects
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    1. Replication set 
+        - used for Scaling and Healing
+        -
+    2. Deployment
+        - Versioning and Rollback
+    
+    3. Service
+        - Static (non ephemeral) Storage
+    
+    4. Volume
+        - Non ephermal Storage
+
+* commands for single cloud starts with kubectl
+* Commands for On Premises starts with kubeadm
+* commands for federated starts with Fubefed
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++        
+Kubernetes Objects
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++        
+ * Kubernetes uses objects to represent the state of the cluster
+ * What containerized applications are running and on which node
+ * The policies around how these applications behave, such as restart policies, upgrades and fault tolerance.
+ * Once you create the objects, the Kubernetes system will constantly work to ensure that object exist and 
+   maintains clusters desired state.
+ * Every Kubernetes object includes two nested fields that govern the object configuration, the object specifcation
+   and Object Status.
+ * The specification, which we provide using manifest, describes your desired state for the object.
+ * The Status describes the actual state of the object and is supplied and updated by the Kubernetes system.
+ * All objects are identified by a unique name and a UID.
+ The basic Kubernetes objects include:
+    1. Pod
+    2. Service
+    3. Volume
+    4. Namespace
+    5. Replicasets
+    6. Secrets
+    7. ConfigMaps
+    8. Deployments
+    9. Jobs
+    10. Daemonsets
+
+Relationship b/w objects:
+    - Pod manages containers
+    - Replicaset manages pods
+    - Services exponse pod processes to the outside world
+    - ConfigMaps and Secrets helps you configure pods
+
+Kubernetes Object
+    - It is represented as JSON or YAML files
+    - You create these and then push them to the Kubernetes API with kubectl
+
+State of the Object
+    - Replicas 2/2
+    - Image > Ubuntu or Tomcat
+    - Name
+    - port
+    - Volume
+    - startup
+    - detached
+
+Kubernetes Object management
+The kubectl command line tool supports several different ways to create and manage Kubernetes objects:
+Imperative Commands                 --operates on    --> Live Objects (recommended for Dev Environment)
+Declarative Object configuration    --operates on    --> Individual files (YAML/JSON) Objects (recommended for Prod Environment)
+
+- Declarative is about describing what you are trying to achieve, without instructing how to do it.
+- Imperative is about explicitly telling "how to accomplish it".
+
+Fundmental of pods
+- When a pod gets created, it is scheduled to run on a node in your cluster.
+- The pod remains on that node until the process is terminated, the pod object is deleted, the pod is evicted for lack
+  of resources, or the node fails.
+- If a pod is scheduled to a node that fails, or if the scheduling operation itself fails, the pod is deleted.
+- If a node dies, the pods scheduled to that node are scheduled to that node are scheduled for deletion after a 
+  timeout period.
+- A given pod (UID) is not "rescheduled" to a new node, instead it will be replaced by an identical pod, even with
+  the same name if desired, but with a new UID.
+- Volume in a pod will exists as long as that Pod (with that UID) exist if that pod is deleted for any reason, volume
+  is also destroyed and created as new on new pod.
+- A controller can create and manage multiple pods, handling replication, rollout and providing self-healing 
+  capablities.
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++        
+Kubernetes configuration
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+All-in-one Single Node Installation     |   With all-in-one, all the master and worker components are installed
+                                        |   on a Single node. This is very useful for learning, developement and 
+                                        |   testing. This type should not be used in Production.
+                                        |   Minikube is one such example.
+-----------------------------------------------------------------------------------------------------------------------------------                
+Single-node etcd, Single-master         |   In this setup, we have a single master node, which also runs a single node
+and multiworker installation            |   etcd instance. Multiple worker nodes are connected to the master node
+-----------------------------------------------------------------------------------------------------------------------------------                                    |
+Single-node etcd, Multi-master and      |   In this setup, we have multiple master nodes, which works in an HA mode, but we have
+Multiworker installation                |   a Single-node etcd instance. Multiple worker nodes are connected to the master node.
+-----------------------------------------------------------------------------------------------------------------------------------

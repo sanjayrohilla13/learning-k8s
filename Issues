@@ -1,0 +1,23 @@
+1. Manifest Name - podTomat.yaml
+Issue: Not able to test the opened port for tomcat pod
+
+      Reference: https://minikube.sigs.k8s.io/docs/handbook/accessing/
+      1. Create a Kubernetes deployment
+      2. Create a Kubernetes service type NodePort
+      3. Check Node Port
+      4. Run service tunnel
+         $ minikube service service-nodeport-dev --url
+
+      5. Try in your browser
+    
+2. Manifest Name - deploymentUbuntu.yaml
+Issue: How to deploy new version of the deployment 
+      1. Change the file and apply again
+
+3. How to deploy Hostpath Volume
+
+4. How to do persistant Volume
+
+5. 
+
+
