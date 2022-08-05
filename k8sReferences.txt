@@ -1,0 +1,24 @@
+References
+Install and set up the kubectl tool: -
+
+https://kubernetes.io/docs/tasks/tools/
+
+
+
+Install Minikube: -
+
+https://minikube.sigs.k8s.io/docs/start/
+
+
+
+Install VirtualBox: -
+
+https://www.virtualbox.org/wiki/Downloads
+
+https://www.virtualbox.org/wiki/Linux_Downloads
+
+
+
+Minikube Tutorial: -
+
+https://kubernetes.io/docs/tutorials/hello-minikube/

@@ -1,0 +1,102 @@
+Yaml is represented in key value pairs
+e.g. 
+Fruit: Apple		
+Vegetable: Carrot
+Liquid: Water
+Meat: chicken
+
+A SPACE MUST BE AFTER THE COLON(:) AND BEFORE THE VALUE.
+
+Array Representation:
+
+Fruits:
+- Orange
+- Apple
+- Banana
+
+Vegetables:
+- Carrot
+- Cauliflower
+- Tomato
+
+Dictionary:
+
+Banana:
+  Calories: 105
+  Fat: 0.4g
+  Carbs: 27 g
+
+Grapes:
+  Calories: 62
+  Fat: 0.3g
+  Carbs: 16g
+
+YOU MUST HAVE EQUAL NUMBER OF BLANK SPACES BEFORE EACH ITEM
+
+List of Dictionaries:
+Fruits:
+  - Banana:
+      Calories: 105
+      Fat: 0.4g 
+      Carbs: 27 g
+
+  - Grapes:
+      Calories: 62
+      Fat: 0.3g
+      Carbs: 16g
+
+Dictionary are unordered collections; however the list is an ordered collection.
+example:
+    - Banana:
+        Calories: 105
+        Fat: 0.4g
+        Carbs: 27 g
+
+    - Banana:
+        Calories: 105
+        Carbs: 27 g
+        Fat: 0.4g
+	
+Eventhough the position of carbs and fats are interchanges in the dictionary but they still hold the same value, so the both of them are equal.
+
+But in case of list
+
+Fruits:
+- Orange
+- Apple
+- Banana
+
+Fruits:
+- Orange
+- Banana
+- Apple
+
+are not equal because postion of item is changed.
+
+# is used for comment
+
+Updating YAML file to include Jacobs Payslips.
+
+Month	Wage
+June	4000
+July	4500
+August	4000
+
+
+Employee:
+  Name: Jacob
+  Sex: Male
+  Age: 30
+  Title: Systems Engineer
+  Projects:
+    - Automation
+    - Support
+  Payslips:
+    - Month: June
+      Wage: 4000
+    - Month: July 
+      Wage: 4500
+    - Month: August
+      Wage: 4000
+
+

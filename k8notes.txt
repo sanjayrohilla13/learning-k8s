@@ -131,7 +131,7 @@ Higher Level Kubernetes Objects
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     1. Replication set 
         - used for Scaling and Healing
-        -
+        
     2. Deployment
         - Versioning and Rollback
     
@@ -210,6 +210,8 @@ Fundmental of pods
   is also destroyed and created as new on new pod.
 - A controller can create and manage multiple pods, handling replication, rollout and providing self-healing 
   capablities.
+- Usually there is a one container per pod to keep the design simple; however, for special cases we can have multiple containers inside the same pod where we want to have some process to assist the container. Such containers are not of same kind. Such assistive containers are termed as helper containers.
+- Container inside the pod are connected with same network and can access each other using localhost web url. 
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++        
 Kubernetes configuration
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -224,3 +226,44 @@ and multiworker installation            |   etcd instance. Multiple worker nodes
 Single-node etcd, Multi-master and      |   In this setup, we have multiple master nodes, which works in an HA mode, but we have
 Multiworker installation                |   a Single-node etcd instance. Multiple worker nodes are connected to the master node.
 -----------------------------------------------------------------------------------------------------------------------------------
+
+
+Kubectl
+
+kubectl run nginx --image=nginx
+create Yaml file using dry run of a pod from command line
+kubectl run redis --image=redis123 --dry-run=client -o yaml > pod.yaml
+kubectl edit pod redis
+
+
+
+Manifest for K8S
+
+There are 4 mandatory sections of the Manifest:
+kind: Pod
+apiVersion: v1
+metadata:
+	#contains dictionary about the pod
+	name: myapp-pod
+	lables:
+		app: myapp
+		type: front-end	
+spec:
+	#contains arrays
+	- name: ngnix-container
+	  image: nginx
+
+# apiVersion values for differnt objects
+==========================
+Kind		apiVersion
+==========================
+Pod		v1
+Service		v1
+ReplicaSet	apps/v1
+Deployment	apps/v1
+==========================
+metadata must contain the name of the pod. other things can be ignored. Else the apply command will through error.
+
+		
+
+

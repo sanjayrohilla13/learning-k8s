@@ -148,6 +148,42 @@ Replication Set (rs)
   apiVersion: v1                                        apiVersion: apps/v1
   selector:                                             selector:
     env: dev                                            env in (dev, staging, prod)
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Difference b/w replicaset and replication Controller
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+1. Replicase Set have a "selector" section in the spec section which allows replicaset to manage
+   existing running pods.
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Ways to Scale the pods in the cluster using replicaset
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+1. change the manifest file and use replace command:
+   kubectl replace -f replicaset-definition.yaml 
+2. by defining replicas in the kubectl command
+   kubectl scale --replicas=6 -f replicaset-definition.yaml 
+                    or
+   kubectl scale --replicas=6 replicaset myapp-replicaset
+                              --type---- ----name--------
+
+  The option 2 will not increase the number of replicas in the manifest file.
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Commands:
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Create the replicaset
+  kubectl create -f replicaset-definition.yaml
+get the replicasets from the cluster
+  kubectl get replicaset
+delete the replicaset
+  kubectl delete replicaset myapp-replicaset  (this will delete all underlying pods)
+scale the replicaset pods
+   kubectl scale --replicas=6 -f replicaset-definition.yaml 
+                    or
+   kubectl scale --replicas=6 replicaset myapp-replicaset
+                              --type---- ----name--------
+Editing the existing running replicaset
+   Kubectl edit replicaset myapp-replicaset 
+
 
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 Kubernetes (K8s) Deployment Objects

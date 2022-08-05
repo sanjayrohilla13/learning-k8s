@@ -1,0 +1,19 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: env-var
+  labels:
+    env: prod
+    app: ubuntu
+    cloud: none
+
+spec:
+  containers:
+    - name: c00
+      image: ubuntu
+      command: ["/bin/bash", "-c", "while true; do echo Hello-Sanjay; sleep 5; done"]
+      env:
+        - name: myname
+          value: sanjayrohilla
+          name: sirname
+          value: Rohilla

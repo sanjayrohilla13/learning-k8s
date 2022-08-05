@@ -1,0 +1,18 @@
+kind: ReplicationController  #This defines to create the Replication Controller object             
+apiVersion: v1
+metadata:
+  name: my-rc
+spec:
+  replicas: 2                 # desired number of pods
+  selector:                   # it tells the controller which pods to watch/belong to this RC
+    appname: ubuntu-app        # this name must match with the container labels                     
+  template:                   # Template element defines a template to launch a new pod
+    metadata:                 
+      name: pod-ubuntu        # name of the pod
+      labels:                 # selector value needs to match the labels values specified in the pod template
+        appname: ubuntu-app
+    spec:
+     containers:
+       - name: c00
+         image: ubuntu
+         command: ["/bin/bash", "-c", "while true; do echo Hello-Sanjay; sleep 5 ; done"]

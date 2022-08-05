@@ -1,0 +1,18 @@
+kind: Pod         #Always use "Pod"; P should be capital
+apiVersion: v1    #apiVersion "V" should be capital
+metadata:
+  name: tomcat
+  labels:
+    env: dev
+    class: pods
+    app: tomcat-dev
+
+spec:
+  containers:
+    - name: c00   # for new block, there should be a blank space between "-" and "name" 
+      image: httpd
+      ports:
+       - containerPort: 8080  # P should be capital
+      env:
+       - name: MYNAME
+         value: Sanjay

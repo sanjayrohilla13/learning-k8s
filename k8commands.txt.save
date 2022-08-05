@@ -1,0 +1,224 @@
+K8S commands
+
+kubectl run hello-minikube
+kubectl cluster-info
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+GET Commands
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+$ kubectl get pods
+$ kubectl get pods -o wide
+$ kubectl get nodes
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+DESCRIBE Commands - checking details about the pod including ip address, no of containers etc.
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+$ kubectl describe pod testpod  
+        or 
+$ kubectl describe pod/testpod
+
+$ kubectl describe node 
+
+- Checking the ip address of the pod
+$ kubectl exec testpod -- hostname -i
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+LOGS Commands - Getting the Logs of the container
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+getting logs for a single container pod
+$ kubectl logs -f testpod
+
+getting logs for a multicontainer pod
+$ kubectl logs -f testpod -c <container name>
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+EXEC Commands - Logging into the container
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Conecting with single container pod, we don't have to define the container name
+$ kubectl exec pod2 -it -- /bin/bash 
+            OR 
+$ kubectl exec -it pod2 -- /bin/bash
+
+Connecting with the container on the multicontainer pod 
+$ kubectl logs -f <pod-name> -c <container-name>
+$ kubectl exec pod2 -it -c c00 -- /bin/bash
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Apply Commands - Creating the objects with manifests(YAML Files)
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+$ kubectl apply -f pod1.yaml
+O/P -> pod/testpod created
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+DELETE Commands
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+$ kubectl delete pod testpod  
+            or 
+$ kubectl delete -f pod1.yaml
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+kubectl commands for Labels 
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+- labels can be seen using on the pods/nodes using the below commands
+$ kubectl get pods --show-labels 
+
+- adding new labels to an existing pod
+$ kubectl label pods tomcat cloud=false
+
+- listing pods matching a label
+$ kubectl get pods -l env=dev  
+
+- listing condition can be defined as not equal as well 
+$ kubectl get pods -l env!=dev
+
+- other operations also can be performed based on list condition
+$ kubectl delete pod -l env!=dev   
+  *above command can delete multiple containers satisfying the condition.
+
+- Using equality based (= or !=) selectors
+$ kubectl get pods -l env=dev
+
+- using set based selectors
+$ kubectl get pods -l 'env notin(dev,stage)'
+
+- using multiple values for the selection
+$ kubectl get pods -l env=dev, app=tomcat, cloud=AWS
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Replication Controller 
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+- For example refer to the rcUbuntu.yaml
+- Write a ReplicaController kind of object in manifest and apply the manifest
+
+- Running the RC
+$ kubectl apply -f rcUbuntu.yaml
+
+- Getting the running RC list
+$ kubectl get rc 
+
+- getting all the pods for particular rc
+$ kubectl get pods -l myname=ubuntu-app
+
+- scale up/down the pods in the rc
+$ kubectl scale replicas=5 rc -l myname=ubuntu-app
+
+* WHILE SCALING DOWN K8S TERMINATES THE LATEST PODS FROM THE Cluster
+
+- terminating all the pods of the rc
+$ kubectl delete rc my-rc
+        or
+$ kubectl delete -f rcUbuntu.yaml
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Replica set 
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+- For example refer to the rsUbuntu.yaml
+
+- Running the rs
+$ kubectl apply -f rsUbuntu.yaml
+
+- Getting the running RS list
+$ kubectl get rs  
+
+- getting all the pods for particular rc
+$ kubectl get pods -l name=ubuntu-app
+
+- scale up/down the pods in the rc
+$ kubectl scale --replicas=5 rs my-rs
+
+* WHILE SCALING DOWN K8S TERMINATES THE LATEST PODS FROM THE Cluster
+
+- terminating all the pods of the rc
+$ kubectl delete rs my-rs
+        or
+$ kubectl delete -f rcUbuntu.yaml
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Deployment 
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Deployment Strateries:
+- Recreate
+- Rolling Updates (default)
+
+Ways of upgrading the deployments
+1. Chagning the deployment definition file and reapply
+2. using the below command:
+	kubectl set image deployment/my-app-deployment nginx=nginx:1.9.1
+This won't change the configuration file and can be difficult to handle the future changes.
+
+
+- For example refer to the deploymentUbuntu.yaml
+
+- Creating the deployment 
+$ kubectl apply -f deploymentUbuntu.yaml
+   		or
+  kubectl create -f deploymentUbuntu.yaml
+
+
+- Getting the deployments
+
+  kubectl get deployments
+ 
+- updating the deployments
+  kubectl apply -f deploymentUbuntu.yaml
+  kubectl set image deployment/myapp-deployment nginx=nginx:1.9.1
+
+- checking status of the deployment
+$ kubectl rollout status deployment my-deployment
+  deployment "my-deployment" successfully rolled out
+
+- deploying new version of the deployment
+Change the deployment manifest for the new changes and apply the below command. 
+$ kubctl apply -f deploymentUbuntu.yaml
+
+adding the change cause to the deployment
+$ kubectl apply -f deploymentUbuntu.yaml --record
+
+- checking rollout history for part icular deployment
+$ kubectl rollout history deployment my-deployment
+
+- undoing the rollout to previous deployment 
+$ kubectl rollout undo deploy/mydeployments 
+
+- Getting the running deployment list
+$ kubectl get deploy 
+
+- Displaying the deployment details:
+$ kubectl describe deployment my-deployment 
+
+- getting all the rs for the deployment with labels 
+$ kubectl get rs --show-labels 
+
+- getting all the rs for particular deployment 
+$ kubectl get rs -l name=ubuntu-app 
+
+- getting all the pods for particular deployment 
+$ kubectl get pods -l name=ubuntu-app
+
+- scale up/down the pods in the deployment 
+$ kubectl scale --replicas=5 deploy my-deployment
+* WHILE SCALING DOWN K8S TERMINATES THE LATEST PODS FROM THE Cluster
+
+- rolling back to the desired revision
+# kubectl rollout undo --to-revision=<revison_no> deploy my-deployment
+*ROLLING OUT BRING THE PODS WITH REQUESTED CONFIGURATION; HOWEVER, SCALING 
+WILL BE UNIMPACTED IN THIS OPERATION.
+
+
+- Checking logs for the pods 
+$ kubectl logs -f my-deployment-5fd64974f8-7pscp
+
+- terminating all the pods of the rc
+$ kubectl delete rs my-rs
+        or
+$ kubectl delete -f rcUbuntu.yaml
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ConfigMap commands
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+kubectl 
+
+5201 0121 9036 191
+
