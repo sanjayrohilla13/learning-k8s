@@ -184,6 +184,9 @@ scale the replicaset pods
 Editing the existing running replicaset
    Kubectl edit replicaset myapp-replicaset 
 
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Using Run Command to create the yaml files
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 Kubernetes (K8s) Deployment Objects
@@ -235,6 +238,23 @@ This can occur due to some of the following factors:
 
 
 
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Service Object
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Service object allows to provision communication between differnt networks on the Kubernetes.
+
+Spec Section of the Service Definition file is different:
+
+spec:
+    type: NodePort
+    ports: 
+     - targetPort: 80
+       port: 80
+       nodePort:30008
+* only port is the mandatory field for service definition; others will be assumed as under:
+  - NodePort will be allocated based on availablity from 30000-32767
+  - targetPort will be assumed as port
 
          
 
