@@ -256,8 +256,424 @@ spec:
   - NodePort will be allocated based on availablity from 30000-32767
   - targetPort will be assumed as port
 
-         
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Differenece b/w Create and apply command
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Create command is an imperative command for applying changes to the cluster.
 
+However, Apply command is declarative method of applying the changes to the infrastructure configuration.
+- It creates a json file for last applied configuration which is checked everytime before applying the 
+  configuration to the cluster.
+- For example, if there is a change in the local manifest file and the same change is not in live env
+  and is not in the last applied configuration. The change will be applied.
+- For removing some changes from the live cluster, the change should exist in the last applied configuration
+  and should not exist in the local manifest file.
+- We should not mix the declarative and imperative commands while working with K8S cluster.
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Labels and Selectors
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Labels are used to identify the K8s objects based on certain criteria
+  - Selector keyword is used to group the K8s Objects with Kubectl commands.
+  - Labels and selectors are used for the connecting internally with in K8s as well
+    e.g. Deployment and replicasets are connected with labels and selectors only.
+         Replicaset and pods are connected in the same way
+
+    commands for selecting the objects with labels
+     kubectl get pods --selector env=dev | wc -l
+
+     count the pods with particular labels
+     kubectl get pods --selector env=dev | wc -l
+
+     Removing header before displaying the pods
+     kubectl get pods --selector env=dev --no-headers | wc -l
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Taints and Tolerations
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Taints:
+ - It is a property applied on the nodes to restrict them for accepting pods with applied tolerations.
+ - By default node is able to accept all kinds of pods
+ - If we want pod to be able to create on certain node, we need to define toleration on the pod
+ - there are three types of taints for the node:
+    - NoSchedule - Don't schedule pod on the node 
+    - PreferNoSchedule - Prefer not to schedule but there is no guarntee that pod will not be scheduled 
+    - NoExecute - This is usually applied when already pods are running on this node. The effect will
+                  kill the pods which don't have tolerations and pods with toleration will have no impact.
+
+- command for applying taint on the node
+    kubectl taint nodes node-name key=value:taint-effect
+
+    kubectl taint nodes node1 app=blue:NoSchedule
+
+- applying tolerations in the pods
+  spec:
+    tolerations:
+    - key: "app"
+      operator: "Equal"
+      value: "blue"
+      effect: "NoSchedule"
+    THE VALUES FOR THE TOLERATIONS WILL BE IN DOUBLE QUOTES ("").
+
+- Checking whether node is tainted or not
+  kubectl describe node <node-name> | grep Taints 
+
+- Normally master node is tainted with NoSchedule; however, it can be changed if required.
+- Untainting the master node can be done with below command:
+  kubectl taint node controlplane node-role.kubernetes.io/master:NoSchedule-
+- Tolerations allow pod to be created on tainted node; however, a pod with toleration can be created on 
+  non-tainted nodes. So toleration and tainting doesn't guarntee that a pod will be created on certain node only.
+- Tolerations and tainting have nothing to do with security.
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Node Selectors
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+- In case we want to place our node of some particular node, we can define the same using the below 
+  approach:
+  1. Assign a label to the node 
+  2. Use the label in the Pod Definition File for selecting the node for provisioning the pod.
+
+- Example:
+Labelling the node with size=large
+  Kubectl label nodes <node-name> <label-key>=<label-value>
+  Kubectl label nodes node1 size=large
+
+Assigning node selector in the pod definition file
+  spec:
+     nodeSelector: 
+         size: large
+
+This can solve the problem of provisioing the pod on some particular node; however, this can't solve the problem 
+of provisioing the pod on complex conditions (Not or OR conditions) e.g. large or medium node/ not small 
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Node Affinity
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+The complex conditions for the pod provisioing on the node can be handled using node affinity. 
+- Node Affinity is assigned within the node specification file
+e.g.
+
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoreDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: size
+            operator: In
+            values:
+            - large
+            - medium
+
+  other values for operator can be:
+   notIn, Exists 
+
+   Exists can be used in case the label only exists irrespective of their value.
+   e.g. we have not provisioned small size nodes. So using Exist operator without values should place
+        the pod on either of the nodes.
+
+  Node Affinity Types:
+  
+  available Affinity types
+  requiredDuringSchedulingIgnoredDuringExecution
+  preferredDuringSchedulingIgnoredDuringExecution
+  -------------------------------------------------------------------------------
+  |                       | During Schduling  |  During Execution               |
+  -------------------------------------------------------------------------------
+  |    Type 1             |  Required         |   Ignored                       |
+  -------------------------------------------------------------------------------
+  |    Type 2             |  Preferred        |   Ignored                       |
+  -------------------------------------------------------------------------------
+  For the above two types the Node Affinity will be considered only while scheduling the pods.
+  Not during Execution.
+
+  The below is planned:
+  requiredDuringSchedulingRequiredDuringExecution
+  -------------------------------------------------------------------------------
+  |                       | During Schduling  |  During Execution               |
+  -------------------------------------------------------------------------------
+  |    Type 3             |  Required         |   Required                      |
+  -------------------------------------------------------------------------------
+  In this case if the label is removed after scheduling the pod, the pod will be killed.
+
+  For keeping the pods on required nodes, sometime a mixture of Node Affinity, taint and toleration both are 
+  used in conjunction.
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Resource Limits
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+By default, K8s looks for 0.5 cpu and 256 Mi of memory for a new pod creation request;however, this can be 
+changed in the pod definition file as shown under:
+
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    ports:
+     - containerPort:8080
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: 1
+    limit:
+      memory:"2Gi"
+      cpu: 2
+
+similary by default, the kubernetes will limit the cpu & memory limits for the pod as 1 vcpu and 512 Mi; However, it can 
+be defined in the pod definition file if you need over the default requirement.
+
+**INCASE THE POD NEEDS MORE CPU THAN DEFINED, K8S WILL THROTTLE THE CPU. HOWEVER, POD MAY BE USING MORE MEMORY THAN Required
+HOWEVER, IF IT HAPPENS FREQUENTLY, THE POD WILL BE TERMINATED.
+
+
+                            Different units for the memory:           
+1G (Gigabyte) = 1,000,000,000 bytes       | 1 Gi (Gibibyte) = 1,073,741,824 bytes
+1M (Megabyte) = 1,000,000 bytes           | 1 Mi (Mebibyte) = 1,048,576 bytes
+1K (Kilo)     = 1,000 bytes               | 1 Ki (Kibibyte) = 1,024 Bytes
+
+
+When a pod is created the containers are assigned a default CPU request of .5 and memory of 256Mi". 
+For the POD to pick up those defaults you must have first set those as default values for request and 
+limit by creating a LimitRange in that namespace.
+
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: mem-limit-range
+spec:
+  limits:
+  - default:
+      memory: 512Mi
+    defaultRequest:
+      memory: 256Mi
+    type: Container
+
+https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/memory-default-namespace/
+
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: cpu-limit-range
+spec:
+  limits:
+  - default:
+      cpu: 1
+    defaultRequest:
+      cpu: 0.5
+    type: Container
+https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/cpu-default-namespace/
+
+https://kubernetes.io/docs/tasks/configure-pod-container/assign-memory-resource
+  
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+DaemonSets
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+- Daemon set is a K8S objects used for scheduling pod on each node.
+- Use Cases:
+  1. Installing Moniotring Solution of each node
+  2. Implementing Networking Solutions
+  3. Installing Kube Proxy (a required Element on the Node)
+- Daemonsets are similar to ReplicaSets in K8S
+- Daemonsets create a pod on each node as the node is created in the network.
+- How to implement the creation of DaemonPods on each node.
+    - Before Kubernetes v1.12, the pod were created with the nodeName. So the pod land on the required node.
+    - After v1.12, session affinity and default scheduler is used for creating pods on the nodes.
+
+Steps for creating the Daemonsets
+1. Get the YAML file for creating the Deployment using the below command:
+   kubectl create deployment <deplyment-name> --image=<image-name> -n <name-space-name> --dry-run=client
+   -o yaml > Daemon.yaml
+
+2. Remove the below configurations from the yaml file
+    - status
+    - Stratergy
+    - replicas
+   replace the below configuration from the yaml file
+    - deplyment keyword with DaemonSet keyword
+
+3. Run the the manifest
+  
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Static Pods
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Finding the Static Pod path for the node
+
+1. Find the config file
+   ps -aux | grep kubelet
+   search --config (--config=/var/lib/kubelet/config.yaml)
+2. Find the "staticPodPath" in the config file.
+   staticPodPath: /etc/kubernetes/manifests
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Mulitple Schedulers
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Multiple Schedulers can be run on the Kubernetes Master node by creating a copy of the 
+default scheduler or creating your own.
+Steps for spinning the additional Scheduler are as under:
+1. Copy the /etc/kubernetes/manifests/kube-scheduler.yaml file to new-name
+2. open the file in a editor
+3. add scheduler name in the command section
+4. define lock-object=<scheduler-name>
+5. Create the pod using Kubectl Create Command
+
+Viewing Schedulers
+-------------------
+kubectl get pods -n kube-system
+
+The new scheduler should appear here and should be in running status.
+
+Assigning scheduler to the pod
+------------------------------
+The pod definition file will have new field named schedulerName: and the new scheduler name.
+
+
+Vieving events
+---------------
+kubectl get events -o wide
+
+This command should show which scheduler picked up the pod creation with Source of the event.
+
+Kubectl logs <custom-scheduler-name> --namespace=kube-system
+
+The above command will show the logs for the scheduler.
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Monitoring the Cluster
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+K8S cluster can be monitored using below tools for cpu and memory usage:
+1. Metrics Server   - In memory monitoring solution and can't be used for historical 
+                      performance analysis.
+2. Prometheus  
+3. Elastic stack
+4. Datadog 
+5. Dynatrace 
+
+* one of the earlies project for the K8S monitoring was HEAPSTER; however, it is not deprecated
+
+Metric Server is one of the good options available now. 
+- You can have one meteric server per K8S cluster
+- It is an Inmemory store
+- Performance Data is collected from Kubelet (aAdvisor) 
+
+For Minikube use the below command to enable the Metrics-server
+minikube addons enable metrics-server
+
+For all others
+Need to clone the repo from github for meterics server and creating the required components.
+
+Common Commands for the Performance Check:
+
+kubectl top node
+kubectl top pod
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Kubernetes Logging
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Logs for the Kubernetes pods are inspected using the below command
+when one container per pod 
+  kubectl logs -f <pod-name>
+When multiple containers are running on the pod 
+  kubectl logs -f <pod-name> <container-name>
+
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Application Lifecycle
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Rollout
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+For rolling out the deployment
+  > kubectl rollout status deployment/myapp-deployment
+for Rollout History
+  > kubectl rollout histroy deployment/myapp-deployment
+
+Deployment Stratergy
+  1. Recreate Stratergy
+     Destroy the current pods and apply new one 
+  2. Rolling Update (default)
+     Destroy and recreate one by one 
+
+Triggering a Deployment
+  1. Change the Manifest file 
+  2. Refresh the pods using the apply commands
+        kubectl apply -f deploy-definition.yaml
+                or 
+     trigger the deployment using command line without changing the manifest file
+        kubectl set image deployment/myapp-deployment nginix=nginx:1.9.1
+     (The changes done via command line will not update the Manifest file)
+
+Deployment process:
+
+Create Deployment:
+  
+  kubectl create -f deployment-definition.yaml
+
+  For the initial application deployment, K8S creates ReplicaSet and deploy the pods
+
+Get Deployment
+  kubectl get deployments
+
+Update Deployment
+  kubectl apply -f deploy-definition.yaml
+  kubectl set image deployment/myapp-deployment nginix=nginx:1.9.1
+
+ For the application update, K8S will create new replica set with the new pods and 
+     destoyed the old pods.
+     All the replicasets (old and new) will still exist in the K8S cluseter 
+
+Status
+  kubectl rollout status deployment/myapp-deployment 
+  kubectl rollout history deployment/myapp-deployment
+
+Undoing the Deployment
+  Kubectl rollout undo deployment/myapp-deployment
+  
+  The undo deployment will kill the pods from the new replicaset and bring the pods from the 
+  older replicaset.
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Configure Applications
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Configuring applications comprises of understanding the following concepts:
+
+Configuring Command and Arguments on applications
+
+Configuring Environment Variables
+
+Configuring Secrets
+
+We will see these next
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Docker Commands for application configuration
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+FROM  ubuntu    -> Takes the base image
+
+CMD  sleep 5  or CMD  ["sleep" "5"]   Hardcoding a command for the container runtime
+
+However by specifying a new command you can override the default command.
+
+ENTRYPOINT ["sleep"]  -> Takes this command as entry point while running the container; however we
+                         need to specify the time for the sleep
+
+ENTRYPOINT ["sleep"] |  Using both of them together can solve this problems
+CMD ["5"]            |  In this case if user doesn't enter the parameter it will be 5.
+
+We can override the ENTRYPOINT point by specifying the same in the command line
+
+docker run --entrypoint sleep2.0 ubuntu-sleeper 10
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Pod arguments related to Docker pararmeter
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ENTRYPOINT ["sleep"]    ->   command: ["sleep2.0"]
+CMD["5"]                ->   args: ["10"]
 
 
 
