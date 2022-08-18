@@ -669,43 +669,557 @@ We can override the ENTRYPOINT point by specifying the same in the command line
 
 docker run --entrypoint sleep2.0 ubuntu-sleeper 10
 
+If both CMD and ENTRYPOINT is defined in Dockerfile. The CMD will execute.
+
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 Pod arguments related to Docker pararmeter
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ENTRYPOINT ["sleep"]    ->   command: ["sleep2.0"]
 CMD["5"]                ->   args: ["10"]
 
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Defining environement variables in pod definition file
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+spec:
+  containers:
+  - name: 
+    image:
+    ports:
+    env:
+      - name: APP_COLOR
+        value: blue
+      - name: APP
+        value: flask
 
-
-
-
-
-
-
-
-
-
-
+ Other alternative ways of passing environement variables to the pod are as under:
+ - ConfigMap
+   ConfigMaps are used to pass the configuration data in the form of key value pairs. It includes two step 
+   process
+    1. Create the ConfigMap
+    2. Inject the values from the ConfigMap into the pod 
  
+ - Creating ConfigMap objects:
+   - imperative way:
+     kubectl create configMap 
+      <configMap-Name> --from-literal=<key>=<value>
+                       --from-literal=<key2>=<value2> and so on.
+     kubectl create configMap app-config --from-literal=APP_COLOR=blue 
 
+     also
 
+     kubectl create configMap app-config --from-file=<path-to-the-file>
 
+     kubectl create configMap app-config --from-file=app_config.properties
+
+  - declarative approach
+      create the ConfigMap configuration file
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: app-config
+          data:
+            APP_COLOR: blue
+            APP_MODE: prod
+
+      run the create command
+        kubectl create -f configMap.yaml 
     
-    
+    We can create as many as we need ConfigMaps
+    for example: app-config, mysql-config, redis-config 
 
-    
+  Listing the ConfigMaps
+    kubectl get ConfigMaps
 
+  describing the ConfigMaps 
+  kubectl describe ConfigMaps
 
+Injecting the configmap values in the Pods
 
+  The keyvalues defined in the configMaps can be injected in the pod-definition file as under:
+  apiVersion:
+  kind:
+  metadata
+  spec:
+    containers:
+    - name:
+      image:
+      ports:
+      envFrom:
+        - configMapRef:
+            name: app-config 
+        - configMapRef:
+            name: rds-config 
+    Creating the pod will inject the values inside the pod in the form of env variables
+|-------------------------------------------|
+| Replacing a pod with updated definition   |
+|-------------------------------------------|
+|    kubectl replace --force -f pod.yaml    |
+|-------------------------------------------|
 
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Configuring Secrets in the K8S
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+spec:
+  containers:
+  - name: 
+    image:
+    ports:
+    env:
+      - name: APP_COLOR
+        value: blue
+      - name: APP
+        value: flask
+
+ Secrets are used for passing the confidential parameters to the pod. It is used in the form of key value pairs. 
+ It includes two step process
+ Creating the Secrets:
+    1. Create the Secrets 
+    2. Inject the values from the secrets into the pod 
+ 
+ - Creating Secret objects:
+   - imperative way:
+     kubectl create secret generic
+      <secret-Name> --from-literal=<key>=<value>
+                       --from-literal=<key2>=<value2> and so on.
+     kubectl create secret generic app-secret --from-literal=DB_HOST=mysql 
+
+     also
+
+     kubectl create secret generic app-secret --from-file=<path-to-the-file>
+
+     kubectl create secret generic app-secret --from-file=app_config.properties
+
+  - declarative approach
+      create the Secret configuration file
+          apiVersion: v1
+          kind: Secret 
+          metadata:
+            name: app-secret 
+          data:
+            DB_HOST:      Hash Value for the mysql
+            DB_USER:      Hash Value for the root
+            DB_PASSWORD:  Hash Value for the paswrd
+
+      run the create command
+        kubectl create -f .yaml     
+|-----------------------------------------------------------------|
+|         Converting Hash Value                                   |
+|-----------------------------------------------------------------|
+|         Encodeing the Value                                     |
+|-----------------------------------------------------------------|
+|    sanjay@sanjay01:~$ echo sanjay | base64                      |
+|    c2FuamF5Cg==                                                 |
+|-----------------------------------------------------------------|
+|         Decoding the Value                                      |
+|-----------------------------------------------------------------|
+|    sanjay@sanjay01:~$ echo c2FuamF5Cg==  | base64  --decode     |
+|    sanjay                                                       |
+|-----------------------------------------------------------------|
+   
+    We can create as many secrets we want.
+    for example: app-secret, mysql-secret, redis-secret
+
+  Listing the secrets
+    kubectl get secrets 
+
+  describing the secret
+  kubectl describe secret 
+
+  Checking values of Secret in base64
+
+Injecting the configmap values in the Pods
+
+  The key values defined in the secrets can be injected in the pod-definition file as under:
+  apiVersion:
+  kind:
+  metadata
+  spec:
+    containers:
+    - name:
+      image:
+      ports:
+      envFrom:
+        - secretRef:
+            name: app-secret 
+        - secretRef:
+            name: rds-secret
+    Creating the pod will inject the values inside the pod in the form of env variables
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+A note about Secrets!
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Remember that secrets encode data in base64 format. Anyone with the base64 encoded secret can easily decode it. 
+As such the secrets can be considered as not very safe. The concept of safety of the Secrets is a bit confusing in Kubernetes. 
+The kubernetes documentation page and a lot of blogs out there refer to secrets as a "safer option" to store sensitive data. 
+They are safer than storing in plain text as they reduce the risk of accidentally exposing passwords and other sensitive data. 
+n my opinion it's not the secret itself that is safe, it is the practices around it. 
+Secrets are not encrypted, so it is not safer in that sense. However, some best practices around 
+using secrets make it safer. As in best practices like:
+  - Not checking-in secret object definition files to source code repositories.
+  - Enabling Encryption at Rest for Secrets so they are stored encrypted in ETCD. 
+  - Also the way kubernetes handles secrets. Such as:
+    - A secret is only sent to a node if a pod on that node requires it.
+    - Kubelet stores the secret into a tmpfs so that the secret is not written to disk storage.
+    - Once the Pod that depends on the secret is deleted, kubelet will delete its local copy of the secret data as well.
+  Read about the protections and risks of using secrets here
+    - Having said that, there are other better ways of handling sensitive data like passwords in Kubernetes, 
+      such as using tools like Helm Secrets, HashiCorp Vault. I hope to make a lecture on these in the future.
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+InitContainers
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+In a multi-container pod, each container is expected to run a process that stays alive as long as the POD's lifecycle. 
+For example in the multi-container pod that we talked about earlier that has a web application and logging agent, both 
+the containers are expected to stay alive at all times. The process running in the log agent container is expected to stay 
+alive as long as the web application is running. If any of them fails, the POD restarts.
+
+But at times you may want to run a process that runs to completion in a container. For example a process that pulls a code 
+or binary from a repository that will be used by the main web application. 
+That is a task that will be run only  one time when the pod is first created. Or a process that waits 
+for an external service or database to be up before the actual application starts. That's where initContainers comes in.
+
+An initContainer is configured in a pod like all other containers, except that it is specified inside a initContainers 
+section,  like this:
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+  labels:
+    app: myapp
+spec:
+  containers:
+  - name: myapp-container
+    image: busybox:1.28
+    command: ['sh', '-c', 'echo The app is running! && sleep 3600']
+  initContainers:
+  - name: init-myservice
+    image: busybox
+    command: ['sh', '-c', 'git clone <some-repository-that-will-be-used-by-application> ; done;']
 
 
+When a POD is first created the initContainer is run, and the process in the initContainer must run to a completion before the real container hosting the application starts. 
+
+You can configure multiple such initContainers as well, like how we did for multi-pod containers. In that case each init container is run one at a time in sequential order.
+
+If any of the initContainers fail to complete, Kubernetes restarts the Pod repeatedly until the Init Container succeeds.
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp-pod
+  labels:
+    app: myapp
+spec:
+  containers:
+  - name: myapp-container
+    image: busybox:1.28
+    command: ['sh', '-c', 'echo The app is running! && sleep 3600']
+  initContainers:
+  - name: init-myservice
+    image: busybox:1.28
+    command: ['sh', '-c', 'until nslookup myservice; do echo waiting for myservice; sleep 2; done;']
+  - name: init-mydb
+    image: busybox:1.28
+    command: ['sh', '-c', 'until nslookup mydb; do echo waiting for mydb; sleep 2; done;']
 
 
+Read more about initContainers here. And try out the upcoming practice test.
+
+https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+CLUSTER MAINTENANCE
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+pod-eviction-timeout - 
+    Time defined in the Kube-controller-manager for waiting for node to come up online before declaring the node dead.
+
+Before performing maintenance on the node, we need to tranfer the running pods to other nodes
+  - kubectl drain node-1 
+      this command will gracefully terminate the pods running on the node-1 and mark the node unschedulebale.
+      kubectl describe node node01 will show unschedulebale = true. 
+  - kubectl uncordon node-1
+      After the node maintenance is completed, above command needs to run to make the node available for pods.
+  - kubectl cordon node-1
+      This command will make the node not available for pod scheduling; however, it won't terminate the existing pods.
+
+kubectl drain <node-name> command will not run if the pod running is not part of the repicaset, daemonset or deployment.
+Incase such a case the pod will be lost forever.
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+CLUSTER SECURITY
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Types of users in K8s cluster:
+1. administer
+2. Developers
+3. 3rd Party Apps for intergration of applications
+4. End users
+
+***End Users' security is taken care by the application. 
+
+1. K8S does not manage user accounts natively and depend on 3rd party servers for the same. like
+   LDAP, IAM etc. So kubectl create user <user-name> and kubectl list users are not valid commands in K8S.
+2. However, K8S natively support service Accounts. Service accounts are used for providing access to 3rd Party apps.
+
+So the user authentication requests will go to kube-apiserver and api-server can user either of the below
+methods to validate the request:
+  1. statics password file
+  2. Static token file
+  3. Certificates
+  4. Identity Services like LDAP and IAM
+
+Using the Static Password File:
+-------------------------------
+Password file usually have three fields in csv file:
+password,user, userid, group(optional) 
+
+** The file name will be passed as an option to the kubeapi server:
+using the apiserver as an service:
+  ExecStart=/usr/local/bin/kube-apiserver \\
+  --basic-auth-file=user-details.csv 
+                  or
+  using the kubeadm tool:
+  - modify the pod definition file to include the file name.
+  - kubeadm tool will restart the service automatically after the defition update
+  apiVersion: v1
+  kind: Pod
+  metadata:
+  spec:
+    containers:
+     - command:
+       -kube-apiserver
+       - --basic-auth-file=user-details.csv 
+       image: 
+       name: 
+  
+  User request for the authentication:
+
+  curl -v -k https://master-node-ip:6443/api/v1/pods -u "user1:passwords123"
+  {
+      "kind": "PodList", 
+
+       request details
+  }
+
+  ApiServer will authenticate the details against the file provided and then execute the request.
+
+using static token file
+------------------------
+Token for the user authentication are provided in a file usually have three fields in csv file:
+authenticationToken,user, userid, group(optional) 
+
+** The file name will be passed as an option to the kubeapi server:
+using the apiserver as an service:
+  ExecStart=/usr/local/bin/kube-apiserver \\
+  --basic-auth-file=user-details.csv 
+                  or
+  using the kubeadm tool:
+  - modify the pod definition file to include the file name.
+  - kubeadm tool will restart the service automatically after the defition update
+  apiVersion: v1
+  kind: Pod
+  metadata:
+  spec:
+    containers:
+     - command:
+       -kube-apiserver
+       - --basic-auth-file=user-details.csv 
+       image: 
+       name: 
+  
+  User request for the authentication:
+
+  curl -v -k https://master-node-ip:6443/api/v1/pods --header "Authorization: Bearer token-details"
+  {
+      "kind": "PodList", 
+
+       request details
+  }
+
+  ApiServer will authenticate the details against the file provided and then execute the request.
+
+***THE ABOVE AUTHENTICATION APPROACHES STORES THE TOKEN IN PLAIN TEXT FORMAT & ARE NOT THE RECOMMENDED
+   APPROACH FOR AUTHENTICATION.
+  
+  
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Container Storage Interface
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+The Container Storage Interface (CSI) is a standard for exposing arbitrary block and file storage 
+systems to containerized workloads on Container Orchestration Systems (COs) like Kubernetes. Using 
+CSI third-party storage providers can write and deploy plugins exposing new storage systems in 
+Kubernetes without ever having to touch the core Kubernetes code.
+The target audience for this site is third-party developers interested in developing CSI drivers 
+for Kubernetes. Kubernetes users interested in how to deploy or manage an existing CSI driver on 
+Kubernetes should look at the documentation provided by the author of the CSI driver.
+
+In other words, the Kubernetes should be able to call the RPCs for creating a new volume deleting 
+and existing volume and place a workload that uses volume onto a node.
+The volume driver needs to implement the programs to support the RPC.
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Defining Volume for Kubernetes pods in Kubernets nodes
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+apiVersion: v1
+kind: Pod
+metadata:
+spec:
+  containers:
+  - image: alpine
+    name:
+    command: [ ]
+    args: [ ]
+    volumeMounts:
+    - mountPath: /opt
+      name: data-volume
+  
+  volumes:
+  - name: data-volume
+    hostpath:
+      path: /data
+      type: directory
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Defining Volume for Kubernetes pods in AWS Block Store (EBS)
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+apiVersion: v1
+kind: Pod
+metadata:
+spec:
+  containers:
+  - image: alpine
+    name:
+    command: [ ]
+    args: [ ]
+    volumeMounts:
+    - mountPath: /opt
+      name: data-volume
+  
+  volumes:
+  - name: data-volume
+    AWSElasticBlockStore:
+      volumeId: <volumeID>
+      type: ext4
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+PERSISTENT VOLUMES 
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Persistent Volumes are clusterwide stoage and can be configured to allocate storage to different 
+pods based on their needs.
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Defining PV for Kubernetes pods using AWS Block Store (EBS)
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name:pv-vol1
+spec:
+  accessModes:
+    -ReadWriteOnce
+  capacity:
+    storage: 1Gi 
+  AWSElasticBlockStore:
+    volumeID: <volumeID>
+    fsType: ext4
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Defining PV for Kubernetes pods using HostPath
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name:pv-vol1
+spec:
+  accessModes:
+    -ReadWriteOnce
+  capacity:
+    storage: 1Gi 
+  hostPath:
+    path: /tmp/data
+  persistentvolumeReclaimPolicy: Retain
+
+Commands for PV
+
+    kubectl create -f pv-definition.yaml
+    kubectl get persistentvolume
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Defining PV Claim 
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+- PV and PV claim are two different objects
+- PVC is created by user and pv is created by administer
+- Once the PVC is created, K8S binds the PV with the PVC
+- Each PVC is bound by one PV
+- If mulitple pvs are available, Labels and Selector can be used to select PV.
+- Below is the criteria for binding the claim with the PVC
+  - Sufficient capacity
+  - Access Modes 
+  - Volume Modes 
+  - Storage Class 
+  - Selector 
+  If PVC is created and no PV is available, the PVC will stay in pending state until new volume is 
+  not created.
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Defining PVC
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name:myclaim
+spec:
+  accessModes:
+    -ReadWriteOnce
+  resources:
+    requests: 
+      storage: 500Mi  
+    
 
 
+Commands for PV
+
+    kubectl create -f pvc-definition.yaml
+    kubectl get persistentvolumeClaims
+
+Deleting the PVC
+  kubectl delete persistentvolumeClaim myclaim 
+  persistentvolumeclaim "myclaim" is deleted.
+
+  after the PVC is deleted, the PV status will depend on persistentvolumeReclaimPolicy. 
+    - Bydefault it will be "Retain" but it will not be allocated any other PVC
+    - it can be set to "Delete" if needed so.
+    - it can be "Recycle" where the data will be scrub before it is made available to other PVC.
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Using PVCs in PODs
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Once you create a PVC use it in a POD definition file by specifying the PVC Claim name under 
+persistentVolumeClaim section in the volumes section like this:
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mypod
+spec:
+  containers:
+    - name: myfrontend
+      image: nginx
+      volumeMounts:
+      - mountPath: "/var/www/html"
+        name: mypd
+  volumes:
+    - name: mypd
+      persistentVolumeClaim:
+        claimName: myclaim
+
+The same is true for ReplicaSets or Deployments. Add this to the pod template section of a 
+Deployment on ReplicaSet.
+
+Reference URL: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#claims-as-volumes
 
 
 
